@@ -29,7 +29,7 @@ int main()
   {
     boost::asio::io_context io_context;
 
-    tcp::acceptor acceptor(io_context, tcp::endpoint(tcp::v4(), PORT));
+    tcp::acceptor acceptor(io_context, tcp::endpoint(boost::asio::ip::make_address(HOST), PORT));
 
     for (;;)
     {
