@@ -9,6 +9,7 @@
 //
 
 #include <cstdlib>
+#include <future>
 #include <iostream>
 #include <thread>
 #include <utility>
@@ -38,7 +39,7 @@ void session(tcp::socket sock)
       else if (error)
         throw std::system_error(error); // Some other error.
 
-      std::cout << "> echoed: " << data << "by Thread-" << cur_thread << "\n";
+      std::cout << "> echoed: " << std::string(data, length) << " by Thread-" << cur_thread << "\n";
 
       boost::asio::write(sock, boost::asio::buffer(data, length));
 
@@ -55,18 +56,19 @@ void session(tcp::socket sock)
   threadCounter--;
 }
 
-void server(boost::asio::io_context& io_context, const char* host, unsigned short port)
+void server(boost::asio::io_context& io_context, const char* host, unsigned short port, std::promise<void>& ready)
 {
-  std::cout << "> server loop running in thread (main thread): " << std::this_thread::get_id() << "\n";
+  std::cout << "> server loop running in thread (main thread): Thread-" << std::this_thread::get_id() << "\n";
   tcp::acceptor a(io_context, tcp::endpoint(boost::asio::ip::make_address(host), port));
+  ready.set_value();
   for (;;)
   {
-    std::string msg;
     tcp::socket sock(io_context);
     a.accept(sock);
     std::thread(session, std::move(sock)).detach();
   }
 }
+
 
 int main()
 {
@@ -76,8 +78,31 @@ int main()
   try
   {
     boost::asio::io_context io_context;
+    std::promise<void> ready;
+    std::future<void> ready_future = ready.get_future();
 
-    std::thread(server, std::ref(io_context), host, port).detach(); 
+    std::thread(server, std::ref(io_context), host, port, std::ref(ready)).detach();
+    ready_future.get(); 
+    while(true)
+    {
+      std::string msg;
+      std::cout << "> ";
+      std::cin >> msg;
+      if (msg == "quit")
+      {
+        if (threadCounter == 1)
+        {
+          std::cout << "> stop procedure started\n";
+          break; 
+        }
+        else
+        {
+          std::cout << "> active threads are remained : " << threadCounter - 1
+        << " threads\n";
+        }
+      }
+    }
+    std::cout << "> echo-server is de-activated\n";
   }
   catch (std::exception& e)
   {
