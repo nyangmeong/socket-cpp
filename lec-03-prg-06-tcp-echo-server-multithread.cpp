@@ -13,13 +13,14 @@
 #include <iostream>
 #include <thread>
 #include <utility>
+#include <atomic>
 #include <boost/asio/ts/buffer.hpp>
 #include <boost/asio/ts/internet.hpp>
 
 using boost::asio::ip::tcp;
 
 const int max_length = 1024;
-int threadCounter = 1;
+std::atomic<int> threadCounter = 1;
 
 void session(tcp::socket sock)
 {
