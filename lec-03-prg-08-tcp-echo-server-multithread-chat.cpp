@@ -17,17 +17,22 @@
 #include <boost/asio/ts/buffer.hpp>
 #include <boost/asio/ts/internet.hpp>
 #include <set>
+#include <mutex>
 
 using boost::asio::ip::tcp;
 
 const int max_length = 1024;
 std::atomic<int> threadCounter = 1;
 std::set<tcp::socket *> group_queue;
+std::mutex group_queue_mutex;
 
 void session(tcp::socket sock)
 {
   threadCounter++;
-  group_queue.insert(&sock);
+  {
+    std::lock_guard<std::mutex> lock(group_queue_mutex);
+    group_queue.insert(&sock);
+  }
   try
   {
     std::cout << "> client connected by IP address " << sock.remote_endpoint().address().to_string()
@@ -50,9 +55,12 @@ void session(tcp::socket sock)
       else
       {
         std::cout << "> received ( " << std::string(data, length) << " ) and echoed to " << group_queue.size() << " clients\n";
-        for (auto &conn : group_queue)
         {
-          boost::asio::write(*conn, boost::asio::buffer(data, length));
+          std::lock_guard<std::mutex> lock(group_queue_mutex);
+          for (auto &conn : group_queue)
+          {
+            boost::asio::write(*conn, boost::asio::buffer(data, length));
+          }
         }
       }
     }
@@ -62,7 +70,10 @@ void session(tcp::socket sock)
     std::cerr << "Exception in thread: " << e.what() << "\n";
   }
   threadCounter--;
-  group_queue.erase(&sock);
+  {
+    std::lock_guard<std::mutex> lock(group_queue_mutex);
+    group_queue.erase(&sock);
+  }
 }
 
 void server(boost::asio::io_context &io_context, const char *host, unsigned short port, std::promise<void> &ready)
