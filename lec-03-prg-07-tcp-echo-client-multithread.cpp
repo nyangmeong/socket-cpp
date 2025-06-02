@@ -58,7 +58,7 @@ int main()
         {
             std::cout << "> ";
             char request[max_length];
-            std::cin >> request;
+            std::cin.getline(request, max_length);
             size_t request_length = std::strlen(request);
             boost::asio::write(s, boost::asio::buffer(request, request_length));
             if (std::string(request, request_length) == "quit")

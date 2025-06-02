@@ -92,7 +92,7 @@ void server(boost::asio::io_context &io_context, const char *host, unsigned shor
 int main()
 {
   const char *host = "127.0.0.1";
-  int port = 65456;
+  const int port = 65456;
   std::cout << "> echo-server is activated\n";
   try
   {
